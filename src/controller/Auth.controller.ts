@@ -1,15 +1,33 @@
 import { Request, Response } from "express";
-import { hash } from "bcrypt";
 import Repository from "../repository/Repository";
+import { hashString, comparePassword, createToken } from "../packages";
 
 export default class AuthController {
   static async signUp(req: Request, res: Response) {
     const { username, password } = req.body;
 
     try {
-      const hashedPassword = await hash(password, 12);
+      const lowerCaseUsername = (username as string).toLowerCase();
 
-      await Repository.Auth.signUp({ username, password: hashedPassword });
+      const usernameExistPromise = Repository.User.findOne({
+        username: lowerCaseUsername,
+      });
+
+      const hashedPasswordPromise = hashString(password);
+
+      const [usernameExist, hashedPassword] = await Promise.all([
+        usernameExistPromise,
+        hashedPasswordPromise,
+      ]);
+
+      if (usernameExist) {
+        throw new Error("Username already exist!");
+      }
+
+      await Repository.Auth.signUp({
+        username: lowerCaseUsername,
+        password: hashedPassword,
+      });
 
       return res
         .status(200)
@@ -17,7 +35,45 @@ export default class AuthController {
     } catch (error: any) {
       console.log("error signup: ", error.message);
 
-      return res.status(400).json({ message: "email already exist!" });
+      return res.status(400).json({ message: error.message });
+    }
+  }
+
+  static async signIn(req: Request, res: Response) {
+    const { username, password } = req.body;
+
+    try {
+      const lowerCaseUsername = (username as string).toLowerCase();
+
+      const usernameExist = await Repository.User.findOne({
+        username: lowerCaseUsername,
+      });
+
+      if (!usernameExist) {
+        throw new Error("Username or Password wrong!");
+      }
+
+      const passwordMatch = await comparePassword(
+        password,
+        usernameExist.password
+      );
+
+      if (!passwordMatch) {
+        throw new Error("Username or Password wrong!");
+      }
+
+      // generate token
+      const token = createToken(usernameExist.username);
+
+      const { username: payloadUsername, _id: id } = usernameExist;
+
+      return res
+        .status(200)
+        .json({ data: { token, user: { id, username: payloadUsername } } });
+    } catch (error: any) {
+      console.log("error signup: ", error.message);
+
+      return res.status(400).json({ message: error.message });
     }
   }
 }

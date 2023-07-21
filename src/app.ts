@@ -29,6 +29,7 @@ app.use("/api/test", (req, res) => {
 });
 
 app.use(prefix, Routes.auth);
+app.use(prefix, Routes.user);
 
 io.on("connection", (socket) => {
   socket.on("message", (val, callback) => {

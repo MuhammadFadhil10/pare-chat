@@ -7,4 +7,10 @@ export default class UserRepository {
   ) {
     return await Models.User.findOne(filter);
   }
+
+  static async search(query: string) {
+    return await Models.User.find({
+      username: { $regex: query, $options: "i" },
+    });
+  }
 }

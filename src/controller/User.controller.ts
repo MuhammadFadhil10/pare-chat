@@ -10,7 +10,14 @@ export default class UserController {
     try {
       const response = await UserRepo.search(query);
 
-      return res.json({ data: response });
+      return res.json({
+        data: response.map((res) => {
+          return {
+            id: res._id,
+            username: res.username,
+          };
+        }),
+      });
     } catch (error: any) {
       return res.json({ message: error.message });
     }

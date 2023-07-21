@@ -5,6 +5,6 @@ const router = express.Router();
 const { search } = controller.User;
 
 // search
-router.post("/user/search/:query", search);
+router.get("/user/search/:query", search);
 
 export default router;

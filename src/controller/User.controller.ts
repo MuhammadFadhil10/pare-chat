@@ -15,6 +15,7 @@ export default class UserController {
           return {
             id: res._id,
             username: res.username,
+            roomId: res.roomId, 
           };
         }),
       });

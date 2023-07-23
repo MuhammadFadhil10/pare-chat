@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import Repository from "../repository/Repository";
-import { hashString, comparePassword, createToken } from "../packages";
+import {
+  hashString,
+  comparePassword,
+  createToken,
+  generateId,
+} from "../packages";
 
 export default class AuthController {
   static async signUp(req: Request, res: Response) {
@@ -27,11 +32,13 @@ export default class AuthController {
       const createdUser = await Repository.Auth.signUp({
         username: lowerCaseUsername,
         password: hashedPassword,
+        roomId: generateId(),
       });
 
       const user = {
-        username: lowerCaseUsername,
         id: createdUser._id,
+        username: lowerCaseUsername,
+        roomId: createdUser.roomId,
       };
 
       const token = createToken(lowerCaseUsername);
@@ -72,10 +79,10 @@ export default class AuthController {
       // generate token
       const token = createToken(usernameExist.username);
 
-      const { username: payloadUsername, _id: id } = usernameExist;
+      const { username: payloadUsername, _id: id, roomId } = usernameExist;
 
       return res.status(200).json({
-        data: { token, user: { id, username: payloadUsername } },
+        data: { token, user: { id, username: payloadUsername, roomId } },
         message: "Success signin!",
       });
     } catch (error: any) {

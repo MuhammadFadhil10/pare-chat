@@ -7,6 +7,8 @@ import { Server } from "socket.io";
 
 import DBConfig from "./db/config";
 import Routes from "./routes/Routes";
+import Repository from "./repository/Repository";
+import { getMessageDto } from "./dto";
 
 config();
 
@@ -25,19 +27,47 @@ app.use(cors({ origin: "*" }));
 app.use(bodyParser.json());
 
 app.use("/api/test", (req, res) => {
-  return res.json({ message: "Get API successfully" });
+  return res.send("Get API successfully");
 });
 
 app.use(prefix, Routes.auth);
 app.use(prefix, Routes.user);
+app.use(prefix, Routes.message);
 
 io.on("connection", (socket) => {
-  socket.on("message", (val, callback) => {
-    console.log("message: ", val);
+  // join room
+  socket.on("join-room", (val) => {
+    socket.join(val);
+  });
 
-    callback(val);
+  socket.on("message", async (val, callback) => {
+    const payload = val;
 
-    io.sockets.emit("message", val);
+    callback(getMessageDto({ ...val, _id: val.id }, val.sender.id));
+
+    await Repository.Message.create(
+      payload.sender.id,
+      payload.receiver.id,
+      payload.message
+    );
+
+    const chats = await Repository.Message.getMessage(payload.receiver.id);
+
+    const formattedChats = chats.map((chat) => {
+      return getMessageDto(
+        {
+          ...chat.toObject(),
+          sender: chat.senderId,
+          receiver: chat.receiverId,
+        },
+        payload.receiver.id
+      );
+    });
+
+    socket.nsp
+      .to(payload.receiver.id)
+      .to(payload.sender.id)
+      .emit("message", formattedChats);
   });
 });
 
